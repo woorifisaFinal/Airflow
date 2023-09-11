@@ -1,0 +1,37 @@
+
+base:
+  mode: infer
+  stage_name: asset # asset(stage1) or portfolio(stage2)
+  task_name: kor
+  model_name: LSTM # LSTM, xgboost
+  user_name: jw 
+  seed: 813
+  data_dir: stage1/data/jw # user_name 
+  output_dir: stage1/output/jw # user_name
+  
+
+data:
+  lookback_window: 50 #  look back period 5 21 42
+  lookahead_window: 30 # 62 # 
+  #feature_list:
+
+
+train:
+  #dataset:
+  start_date: 2017-01-01
+  end_date: 2020-12-31
+  use_derive_vairable: true
+
+  
+
+
+valid:
+  #dataset:
+  start_date: 2021-01-01
+  end_date: 2021-12-31
+  use_derive_vairable: true
+
+test:
+  #dataset:
+  start_date: 2022-01-01
+  end_date: 2022-12-31
