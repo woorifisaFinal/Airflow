@@ -502,9 +502,7 @@ trainX, trainY = np.array(trainX), np.array(trainY)
 valX, valY = np.array(valX), np.array(valY)
 testX, testY = np.array(testX), np.array(testY)
 
-print(trainX.shape, trainY.shape)
-print(testX.shape, testY.shape)
-print(valX.shape, valY.shape)
+
 # LSTM model
 import numpy as np
 import pandas as pd
