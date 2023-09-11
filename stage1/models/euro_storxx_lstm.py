@@ -505,9 +505,6 @@ testX, testY = np.array(testX), np.array(testY)
 print(trainX.shape, trainY.shape)
 print(testX.shape, testY.shape)
 print(valX.shape, valY.shape)
-
-!pip install keras
-
 # LSTM model
 import numpy as np
 import pandas as pd

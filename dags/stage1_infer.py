@@ -33,7 +33,7 @@ with DAG(dag_id='stage1_predict', default_args=default_args, catchup=False) as d
         # bash_command="/opt/airflow/stage1/tools/stage1_predict.sh ",
         # bash_command="../stage1/tools/stage1_predict.sh ",
         # bash_command="${AIRFLOW_HOME}/stage1/tools/stage1_predict.sh ",
-        bash_command="./stage1_predict.sh ",
+        bash_command="${AIRFLOW_HOME}/dags/stage1_predict.sh ",
         
         retries=3, # 이 태스크가 실패한 경우, 3번 재시도 합니다.
         retry_delay=timedelta(minutes=1), # 재시도하는 시간 간격은 1분입니다.

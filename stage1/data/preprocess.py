@@ -4,12 +4,8 @@ from os.path import join as opj
 import pandas as pd
 import numpy as np
 from tqdm.auto import tqdm
-
-
 import ta
-
 from stage1.utils import get_week_of_month
-
 from sklearn.model_selection import train_test_split
 # yahoo financial, unofficial way, rate limit
 from pandas_datareader import data as pdr
