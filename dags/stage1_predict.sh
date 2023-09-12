@@ -1,4 +1,3 @@
-
 export stage_dir=/opt/airflow
 export config_dir=/opt/airflow/stage1/config
 export today="$(date '+%Y%m%d')"

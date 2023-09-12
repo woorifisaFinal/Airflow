@@ -62,26 +62,6 @@ def infer(cfg):
 
             models.create_jw_xgboost(cfg)
         
-        # trainX, trainY, valX, valY, testX, testY  = DataPreprocess(cfg).load_data()
-
-        # ##### 모델 불러오기
-
-        # model = create_jw_model(trainX, trainY)
-
-        # model.load_weights(opj(cfg.base.output_dir, 'lstm_weights_last.h5'))
-        # print("Loaded model weights from disk")
-
-        # ##### 예측 & 결과 저장
-
-        # # prediction
-        # prediction = model.predict(testX)
-        # print(prediction.shape, testY.shape)
-
-        # # 추가.. 예측 결과 저장 (stage2에서 쓰도록)
-        # import pickle
-        # with open(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_22.pkl"), 'wb') as f:
-        #     pickle.dump(prediction, f)
-
     elif cfg.base.user_name == "sm":
 
         if cfg.base.task_name == "nikkei":
@@ -162,15 +142,8 @@ def infer(cfg):
 
             # 추가.. 예측 결과 저장 (stage2에서 쓰도록)
             import pickle
-            # with open(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_22.pkl"), 'wb') as f:
-            # with open(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_21.pkl"), 'wb') as f:
-            #     pickle.dump(preds.reshape(-1,), f)
-    
-
-            # 결과 저장
             pd.DataFrame(data={"date":date_list, cfg.base.task_name:preds.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_22.csv"), index=False)
 
-            # pd.DataFrame(data={"date":data_sequences_2022, cfg.base.task_name:predictions_2022.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_22.csv"), index=False)
         elif cfg.base.mode=='infer':
             preds = model.predict(x_data, verbose="auto")
             pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:preds.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
