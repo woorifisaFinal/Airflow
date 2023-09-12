@@ -16,4 +16,5 @@ python -m stage1.tools.infer -C ${config_dir}/jh/india_lstm_infer.yml -D ${today
 python -m stage1.tools.infer -C ${config_dir}/jh/taiwan_lstm_infer.yml -D ${today}
 python -m stage1.tools.infer -C ${config_dir}/jw/ks_lstm_infer.yml -D ${today}
 python -m stage1.tools.infer -C ${config_dir}/bg/gold_lstm_infer.yml -D ${today}
+python -m stage1.tools.infer -C ${config_dir}/hs/euro_lstm_infer.yml -D ${today}
 python -m stage1.output.output_collection -D ${today}

@@ -311,7 +311,7 @@ def add_feature(df_):
     df = df_.copy()
     """# TA 라이브러리 활용"""
 
-    H, L, C, V = df['high'], df['low'], df['close'], df['volume']
+    H, L, C, V = df['high_x'], df['low_x'], df['close_x'], df['volume_x']
 
     """ATR (ta.volatility)"""
     df['ATR'] = ta.volatility.average_true_range(high=H, low=L, close=C, fillna=True)
