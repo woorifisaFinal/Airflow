@@ -4,14 +4,19 @@ from os.path import join as opj
 import pandas as pd
 import numpy as np
 from tqdm.auto import tqdm
+
+
 import ta
+
 from stage1.utils import get_week_of_month
+
 from sklearn.model_selection import train_test_split
 # yahoo financial, unofficial way, rate limit
 from pandas_datareader import data as pdr
 import yfinance as yf
 yf.pdr_override()
 
+__all__ = ["DataPreprocess", "add_feature"]
 
 class DataPreprocess:
     """
@@ -286,3 +291,36 @@ def jh_make_data(df, cfg_data, return_to_df=False):
     else:
         return x_data, y_data, date_list
 
+
+def add_feature(df_):
+
+    df = df_.copy()
+    """# TA 라이브러리 활용"""
+
+    H, L, C, V = df['high'], df['low'], df['close'], df['volume']
+
+    """ATR (ta.volatility)"""
+    df['ATR'] = ta.volatility.average_true_range(high=H, low=L, close=C, fillna=True)
+
+    """SAR (ta.parabolic sar)"""
+
+    df['Parabolic SAR'] = ta.trend.psar_down(
+        high=H, low=L, close=C, fillna=True)
+
+    """MACD (ta.trend)"""
+
+    df['MACD'] = ta.trend.macd(close=C, fillna=True)
+
+    """SMA (ta.trend)"""
+
+    df['SMA'] = ta.trend.sma_indicator(close=C, fillna=True)
+
+    """EMA(ta.trend)"""
+
+    df['EMA'] = ta.trend.ema_indicator(close=C, fillna=True)
+
+    """RSI(ta.momentum)"""
+
+    df['RSI'] = ta.momentum.rsi(close=C, fillna=True)
+
+    return df

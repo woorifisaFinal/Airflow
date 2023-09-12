@@ -170,5 +170,10 @@ def infer(cfg):
     elif cfg.base.user_name == "bg":
         models.gold_lstm(cfg)
 
+    elif cfg.base.user_name == "hs":
+        if cfg.base.model_name == "LSTM":
+            models.euro_lstm(cfg)
+        
+
 if __name__=="__main__":
     infer(cfg)
