@@ -1,19 +1,24 @@
-
-
-
 from glob import glob
 import pandas as pd
 import pickle
 import os
+import argparse
 from os.path import join as opj
+from datetime import datetime
 #######################
 #### output의 index로 기간들 어떻게 넣어줄지 고려해볼 부분..
 
 # opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_22.pkl"),
 # file_list = glob(opj("stage1", "output", "*", "*_prediction_*.csv"))
-file_list_21 = glob(opj("stage1", "output", "*", "*_prediction_21.csv"))
-file_list_22 = glob(opj("stage1", "output", "*", "*_prediction_22.csv"))
+# file_list_21 = glob(opj("stage1", "output", "*", "*_prediction_21.csv"))
+# file_list_22 = glob(opj("stage1", "output", "*", "*_prediction_22.csv"))
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-D', '--date')
+args = parser.parse_args()
+
+date = datetime.strptime(args.date, '%Y%m%d').strftime('%Y-%m-%d')
+file_list = glob(opj("stage1", "output", "*", f"*_prediction_{date}.csv"))
 
 # print("file_list :", file_list)
 # # 자산별 예측결과를 저장
@@ -39,23 +44,23 @@ file_list_22 = glob(opj("stage1", "output", "*", "*_prediction_22.csv"))
 # # pred_reseult.to_csv(f"stage1_{file_name.split("_")[-1].split(".")[0]}_prediction.csv", index=False)
 
 
+df_sum= pd.DataFrame(data={'date':date}, index=[0])
+for li in file_list:
+    a = pd.read_csv(li, index_col=0)#.squeeze()
+    df_sum[a.columns] = a.values
+df_sum.to_csv(opj("stage1", "output", f"stage1_prediction_{date}.csv"), index=False)
+
 # df_sum= pd.DataFrame()
-# for li in file_list:
+# for li in file_list_21:
 #     a = pd.read_csv(li, index_col=0).squeeze()
 #     df_sum[a.name] = a
-# df_sum.to_csv(opj("stage1", "output", "stage1_prediction.csv"), index=True)
+# df_sum.to_csv(opj("stage1", "output", "stage1_prediction_21.csv"), index=True)
 
-df_sum= pd.DataFrame()
-for li in file_list_21:
-    a = pd.read_csv(li, index_col=0).squeeze()
-    df_sum[a.name] = a
-df_sum.to_csv(opj("stage1", "output", "stage1_prediction_21.csv"), index=True)
-
-df_sum= pd.DataFrame()
-for li in file_list_22:
-    a = pd.read_csv(li, index_col=0).squeeze()
-    df_sum[a.name] = a
-df_sum.to_csv(opj("stage1", "output", "stage1_prediction_22.csv"), index=True)
+# df_sum= pd.DataFrame()
+# for li in file_list_22:
+#     a = pd.read_csv(li, index_col=0).squeeze()
+#     df_sum[a.name] = a
+# df_sum.to_csv(opj("stage1", "output", "stage1_prediction_22.csv"), index=True)
 
 
 

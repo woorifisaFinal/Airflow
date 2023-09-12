@@ -135,7 +135,7 @@ class DataPreprocess:
             test_data_test_scaled = stock_data_target[n_test:]
             test_dates = dates[n_test:]
 
-            import numpy as np
+            # import numpy as np
             # data reformatting for LSTM
             pred_days = 1  # prediction period - 3months
             seq_len = 10   # sequence length = past days for future prediction.
@@ -183,6 +183,19 @@ class DataPreprocess:
             
 
             if self.cfg.base.mode == 'infer':
+                from datetime import datetime, timedelta
+                from stage1.utils import scaler
+
+                end_date = datetime.strptime(self.cfg.base.base_date, '%Y-%m-%d')
+                start_date = end_date- timedelta(days=100)
+                test = pdr.get_data_yahoo(self.cfg.base.index_name, start_date, end_date).reset_index()
+                # test.tail(50)
+                df_ = jh_make_features(test.tail(50))
+                df = df_[self.cfg.data.feature_list].copy()
+                x_data = np.array(df.values)[np.newaxis,...]
+                return x_data
+            
+            elif self.cfg.base.mode == 'valid':
                 from stage1.utils import scaler
                 test = pdr.get_data_yahoo(self.cfg.base.index_name, self.cfg.test.start_date, self.cfg.test.end_date).reset_index()
                 x_data, y_data, date_list = jh_make_data(test, self.cfg.data)
@@ -248,6 +261,7 @@ def jh_make_data(df, cfg_data, return_to_df=False):
     """
     df_ = jh_make_features(df)
     df = df_[cfg_data.feature_list].copy()
+    
     # change into uncommented code (delete "+1" in -1 axis of df.iloc). caused by  IndexError: index 1230 is out of bounds for axis 0 with size 1230
     # total_sample_num = df.iloc[cfg_data.lookback_window-1:-cfg_data.lookahead_window+1].shape[0]
     total_sample_num = df.iloc[cfg_data.lookback_window-1:-cfg_data.lookahead_window].shape[0]
@@ -269,7 +283,7 @@ def jh_make_data(df, cfg_data, return_to_df=False):
         # 특징 하나일 떄는 아래와 같이 사용
         # x_data[idx,] = df.iloc[idx:idx+cfg_data.lookback_window, fea_num].values
         x_data[idx,] = df.iloc[idx:idx+cfg_data.lookback_window, :].values
-
+        
         # 반복 효율을 위해 a로 변환 가능 [a는 for문 밖으로]
         # a = end_date+cfg_data.lookahead_window
         # y_data[idx,] = df.iloc[idx+a, fea_num]/df.iloc[idx+end_date, fea_num]

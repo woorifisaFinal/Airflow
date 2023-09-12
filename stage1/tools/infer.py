@@ -33,7 +33,7 @@ import sys
 ## 환경설정 얻어오기 위해 인자 받기
 parser = argparse.ArgumentParser(description="")
 parser.add_argument("-C", "--config", help="config filename")
-
+parser.add_argument("-D", "--date", help="today date format : YYYYMMDD")
 parser_args, _ = parser.parse_known_args(sys.argv)
 cfg = yaml.safe_load(open(parser_args.config).read())
 for k, v in cfg.items():
@@ -42,6 +42,9 @@ for k, v in cfg.items():
 cfg = SimpleNamespace(**cfg)
 # print(cfg)
 
+from datetime import datetime
+
+cfg.base.base_date = datetime.strptime(parser_args.date, '%Y%m%d').strftime('%Y-%m-%d')
 
 
 def infer(cfg):
@@ -140,40 +143,44 @@ def infer(cfg):
     elif cfg.base.user_name == "jh":
         
         logger = get_logger(cfg.base)
-
-        x_data, y_data, date_list = DataPreprocess(cfg).load_data(logger)
-
+        if cfg.base.mode=='valid':
+            x_data, y_data, date_list = DataPreprocess(cfg).load_data(logger)
+        elif cfg.base.mode=='infer':
+            x_data = DataPreprocess(cfg).load_data(logger)
+        
         model = build_rnn_model(cfg)
         model.load_weights(opj(cfg.base.output_dir, f"{cfg.base.task_name}_{cfg.base.model_name}_{cfg.base.exp_name}.h5"))
+        if cfg.base.mode=='valid':
+                
+            import numpy as np
+            ##### 예측 & 결과 저장
+            preds = np.zeros(y_data.shape)
 
-        import numpy as np
-        ##### 예측 & 결과 저장
-        preds = np.zeros(y_data.shape)
 
 
+            preds = model.predict(x_data, verbose="auto") # / FOLDS
 
-        preds = model.predict(x_data, verbose="auto") # / FOLDS
+            # 추가.. 예측 결과 저장 (stage2에서 쓰도록)
+            import pickle
+            # with open(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_22.pkl"), 'wb') as f:
+            # with open(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_21.pkl"), 'wb') as f:
+            #     pickle.dump(preds.reshape(-1,), f)
+    
 
-        # 추가.. 예측 결과 저장 (stage2에서 쓰도록)
-        import pickle
-        # with open(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_22.pkl"), 'wb') as f:
-        # with open(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_21.pkl"), 'wb') as f:
-        #     pickle.dump(preds.reshape(-1,), f)
- 
+            # 결과 저장
+            pd.DataFrame(data={"date":date_list, cfg.base.task_name:preds.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_22.csv"), index=False)
 
-        # 결과 저장
-        pd.DataFrame(data={"date":date_list, cfg.base.task_name:preds.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_22.csv"), index=False)
-
-        # pd.DataFrame(data={"date":data_sequences_2022, cfg.base.task_name:predictions_2022.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_22.csv"), index=False)
-       
+            # pd.DataFrame(data={"date":data_sequences_2022, cfg.base.task_name:predictions_2022.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_22.csv"), index=False)
+        elif cfg.base.mode=='infer':
+            preds = model.predict(x_data, verbose="auto")
+            pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:preds.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+    
 
     elif cfg.base.user_name == "bg":
         models.gold_lstm(cfg)
-
     elif cfg.base.user_name == "hs":
         if cfg.base.model_name == "LSTM":
             models.euro_lstm(cfg)
         
-
 if __name__=="__main__":
     infer(cfg)

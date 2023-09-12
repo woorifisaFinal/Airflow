@@ -29,6 +29,7 @@ def create_sequence_data(data, sequence_length, lookahead_window):
             dates_list.append(dates)
     return sequences, dates_list
 
+
 def bond(cfg, file_name, country):
     if cfg.base.mode == 'train':
         # 데이터 로드 및 전처리
@@ -103,7 +104,7 @@ def bond(cfg, file_name, country):
         # RMSE 계산
         # rmse_2022 = np.sqrt(mean_squared_error(y_test_2022, predictions_2022))
         # print(f'Root Mean Squared Error for 2022: {rmse_2022}')
-    else:
+    elif cfg.base.mode=='valid':
         # 데이터 로드 및 전처리
         data = pd.read_csv(opj(cfg.base.data_dir, file_name), encoding='cp949')
         data['날짜'] = pd.to_datetime(data['날짜'])
@@ -180,7 +181,56 @@ def bond(cfg, file_name, country):
         pd.DataFrame(data={"date":data_sequences_2021, cfg.base.task_name:predictions_2021.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_21.csv"), index=False)
 
         pd.DataFrame(data={"date":data_sequences_2022, cfg.base.task_name:predictions_2022.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_22.csv"), index=False)
-       
+    else:
+        # 데이터 로드 및 전처리
+        data = pd.read_csv(opj(cfg.base.data_dir, file_name), encoding='cp949')
+        data['날짜'] = pd.to_datetime(data['날짜'])
+        data = data.sort_values(by='날짜')
+
+        
+        if (data['날짜']==cfg.base.base_date).sum()==0:
+            # 존재하지 않는 날. 휴장
+            pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:np.NaN},index=[0]).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+            return 
+        data = data[data['날짜']<cfg.base.base_date].tail(50)
+            
+        data = data[['날짜', '종가', '시가', '저가', '변동률', '수익률']]
+        if country =='kor':
+            data['종가'] = data['종가'].str.replace(',', '').astype(float)
+            data['시가'] = data['시가'].str.replace(',', '').astype(float)
+            data['저가'] = data['저가'].str.replace(',', '').astype(float)
+            data['변동률'] = data['변동률'].str.replace('%', '').astype(float) / 100.0
+            data['수익률'] = data['수익률'].str.replace('%', '').astype(float) / 100.0
+        
+        # 데이터 스케일링
+        with open(opj(cfg.base.output_dir, f"{cfg.base.task_name}_close_scaler.pkl"), 'rb') as f:
+            scaler_closing = pickle.load(f)
+        with open(opj(cfg.base.output_dir, f"{cfg.base.task_name}_open_scaler.pkl"), 'rb') as f:
+            scaler_opening = pickle.load(f)
+        with open(opj(cfg.base.output_dir, f"{cfg.base.task_name}_low_scaler.pkl"), 'rb') as f:
+            scaler_low = pickle.load(f)
+        with open(opj(cfg.base.output_dir, f"{cfg.base.task_name}_low_scaler.pkl"), 'rb') as f:
+            scaler_low = pickle.load(f)
+        with open(opj(cfg.base.output_dir, f"{cfg.base.task_name}_volatility_scaler.pkl"), 'rb') as f:
+            scaler_volatility = pickle.load(f)         
+        with open(opj(cfg.base.output_dir, f"{cfg.base.task_name}_return_scaler.pkl"), 'rb') as f:
+            scaler_return = pickle.load(f)
+
+        data['종가'] = scaler_closing.transform(data[['종가']])
+        data['시가'] = scaler_opening.transform(data[['시가']])
+        data['저가'] = scaler_low.transform(data[['저가']])
+        data['변동률'] = scaler_volatility.transform(data[['변동률']])
+        data['수익률'] = scaler_return.transform(data[['수익률']])
+
+        from keras.models import load_model
+        model = load_model(opj(cfg.base.output_dir,f"{cfg.base.task_name}_lstm.h5"))
+
+        X = np.array([data[['종가', '시가', '저가', '변동률']].values])
+        test_pred = model.predict(X)
+
+        # 결과 저장
+        # import pickle
+        pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
 
 def bond_short(cfg):
     bond(cfg, '3년국채 데이터17_22.csv', "kor")

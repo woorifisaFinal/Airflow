@@ -9,7 +9,7 @@ from tensorflow.keras.layers import LSTM, Dense
 from tensorflow.keras.optimizers import Adam
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
-
+import joblib
 __all__ = ['gold_lstm']
 
 def gold_lstm(cfg):
@@ -17,108 +17,150 @@ def gold_lstm(cfg):
     variation_column = data_nomalized.pop('변동 %_gold')
     data_nomalized.insert(1, '변동 %_gold', variation_column)  # Insert 'Variation' column at the beginning
 
-    train = data_nomalized[data_nomalized['날짜'].between('2017-01-01', '2020-12-31')]
-    vaildation = data_nomalized[data_nomalized['날짜'].between('2021-01-01', '2021-12-31')]
-    test = data_nomalized[data_nomalized['날짜'].between('2022-01-01', '2022-12-31')]
+    if cfg.base.mode=='infer':
 
-    train = train.reset_index(drop=True)
-    vaildation = vaildation.reset_index(drop=True)
-    test = test.reset_index(drop=True)
+        if (data_nomalized['날짜']==cfg.base.base_date).sum()==0:
+            # 존재하지 않는 날. 휴장
+            pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:np.NaN},index=[0]).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+            return 
+        test = data_nomalized[data_nomalized['날짜']<cfg.base.base_date].tail(50)
+        test = test.reset_index(drop=True)
 
-    first_data = data_nomalized
+        first_data = test
+        stock_data = first_data.drop(columns=['날짜'])
 
-    first_data.columns.nunique()
+        stock_data_변동 = stock_data['변동 %_gold']
 
-    #오리지날 수익률 저장하기
-    original_volatility = first_data['변동 %_gold'].values
+        stock_data_test = stock_data.drop(columns=['변동 %_gold'])
+    
+        scaler = joblib.load(opj(cfg.base.output_dir,'gold_scaler.pkl'))
 
-    #오리지날 날짜 저장하기
-    dates = pd.to_datetime(first_data['날짜'])
+        stock_data_scaled_test = scaler.transform(stock_data_test)
 
-    #날짜 제외하고 만들기
-    stock_data = first_data.drop(columns=['날짜'])
+        # stock_data_test와 stock_data_2는 같아 보여서 stock_data_2를 stock_data_test로 수정했음 (columns 부분)
+        stock_data_scaled = pd.DataFrame(data=stock_data_scaled_test, columns=stock_data_test.columns)
 
-    stock_data_변동 = stock_data['변동 %_gold']
+  
+        stock_data_scaled = stock_data_scaled.reset_index(drop=True)
 
-    stock_data_2 = stock_data.drop(columns=['변동 %_gold'])
+        stock_data_scaled = pd.concat([stock_data_변동, stock_data_scaled], axis=1)
 
-    stock_data_train_val=stock_data_2[0:len(train)+len(vaildation)]
+        """***61 거래량_WTI 1535 non-null float64 여기에 있는 null 때문에 생긴 문제입니다.***"""
 
-    stock_data_test = stock_data_2[len(train)+len(vaildation):]
+        stock_data_scaled = stock_data_scaled.values
 
-    # normalize the dataset- x
-    scaler = StandardScaler()
-    scaler = scaler.fit(stock_data_train_val)
-    stock_data_scaled = scaler.transform(stock_data_train_val) #train
-    stock_data_scaled_test = scaler.transform(stock_data_test)
+        testX = []
+        testX.append(stock_data_scaled)
+        testX = np.array(testX)
 
-    stock_data_scaled = pd.DataFrame(data=stock_data_scaled, columns=stock_data_2.columns)
+    elif cfg.base.mode=='train':
+        train = data_nomalized[data_nomalized['날짜'].between('2017-01-01', '2020-12-31')]
+        vaildation = data_nomalized[data_nomalized['날짜'].between('2021-01-01', '2021-12-31')]
+        test = data_nomalized[data_nomalized['날짜'].between('2022-01-01', '2022-12-31')]
 
-    stock_data_scaled_test = pd.DataFrame(data=stock_data_scaled_test, columns=stock_data_2.columns)
+        train = train.reset_index(drop=True)
+        vaildation = vaildation.reset_index(drop=True)
+        test = test.reset_index(drop=True)
 
-    stock_data_scaled = pd.concat([stock_data_scaled, stock_data_scaled_test], axis=0)
+        first_data = data_nomalized
 
-    stock_data_scaled = stock_data_scaled.reset_index(drop=True)
+        first_data.columns.nunique()
 
-    stock_data_scaled = pd.concat([stock_data_변동, stock_data_scaled], axis=1)
+        #오리지날 수익률 저장하기
+        original_volatility = first_data['변동 %_gold'].values
 
-    """***61 거래량_WTI 1535 non-null float64 여기에 있는 null 때문에 생긴 문제입니다.***"""
+        #오리지날 날짜 저장하기
+        dates = pd.to_datetime(first_data['날짜'])
 
-    stock_data_scaled = stock_data_scaled.values
+        #날짜 제외하고 만들기
+        stock_data = first_data.drop(columns=['날짜'])
 
-    stock_data_scaled.shape
+        stock_data_변동 = stock_data['변동 %_gold']
 
-    # split to train data and test data
-    n_train = len(train)
-    train_data_scaled = stock_data_scaled[0: n_train]
-    train_dates = dates[0: n_train]
+        stock_data_2 = stock_data.drop(columns=['변동 %_gold'])
 
-    n_validation = len(train) + len(vaildation)
-    val_data_scaled = stock_data_scaled[n_train:n_validation]
-    val_dates = dates[n_train:n_validation]
+        stock_data_train_val=stock_data_2[0:len(train)+len(vaildation)]
 
-    n_test = n_validation
-    test_data_scaled = stock_data_scaled[n_test:]
-    test_dates = dates[n_test:]
+        stock_data_test = stock_data_2[len(train)+len(vaildation):]
 
-    # data reformatting for LSTM
-    pred_days = 30  # prediction period
-    seq_len = 50   # sequence length = past days for future prediction.
-    input_dim = 74  # input_dimension = ['Open', 'High', 'Low', 'Close', 'Volume']
+        # normalize the dataset- x
+        scaler = StandardScaler()
+        scaler = scaler.fit(stock_data_train_val)
+        
+        joblib.dump(scaler, opj(cfg.base.output_dir, 'gold_scaler.pkl'))    
 
-    trainX = []
-    trainY = []
-    valX = []
-    valY = []
-    testX = []
-    testY = []
+        stock_data_scaled = scaler.transform(stock_data_train_val) #train
+        stock_data_scaled_test = scaler.transform(stock_data_test)
 
-    # 추론 날짜 (base_date 출력을 위한)
-    val_dates_for_infer = []
-    test_dates_for_infer = []
-    # val_dates, test_dates는 pd.Series로 되어 있고 numpy datetime으로 되어 있다.
-    val_dates = val_dates.astype('string')
-    test_dates = test_dates.astype('string')
+        stock_data_scaled = pd.DataFrame(data=stock_data_scaled, columns=stock_data_2.columns)
 
-    for i in range(seq_len, n_train-pred_days +1):
-        trainX.append(train_data_scaled[i - seq_len:i, 0:train_data_scaled.shape[1]])
-        trainY.append(train_data_scaled[i + pred_days - 1:i + pred_days, 0])
+        stock_data_scaled_test = pd.DataFrame(data=stock_data_scaled_test, columns=stock_data_2.columns)
 
-    for i in range(seq_len, len(val_data_scaled)-pred_days +1):
-        valX.append(val_data_scaled[i - seq_len:i, 0:val_data_scaled.shape[1]])
-        valY.append(val_data_scaled[i + pred_days - 1:i + pred_days, 0])
-        # base_dates추가
-        val_dates_for_infer.append(val_dates[i + pred_days - 1:i + pred_days].values[0])
+        stock_data_scaled = pd.concat([stock_data_scaled, stock_data_scaled_test], axis=0)
 
-    for i in range(seq_len, len(test_data_scaled)-pred_days +1):
-        testX.append(test_data_scaled[i - seq_len:i, 0:test_data_scaled.shape[1]])
-        testY.append(test_data_scaled[i + pred_days - 1:i + pred_days, 0])
-        # base_dates추가
-        test_dates_for_infer.append(test_dates[i + pred_days - 1:i + pred_days].values[0])
+        stock_data_scaled = stock_data_scaled.reset_index(drop=True)
 
-    trainX, trainY = np.array(trainX), np.array(trainY)
-    valX, valY = np.array(valX), np.array(valY)
-    testX, testY = np.array(testX), np.array(testY)
+        stock_data_scaled = pd.concat([stock_data_변동, stock_data_scaled], axis=1)
+
+        """***61 거래량_WTI 1535 non-null float64 여기에 있는 null 때문에 생긴 문제입니다.***"""
+
+        stock_data_scaled = stock_data_scaled.values
+
+
+
+        # split to train data and test data
+        n_train = len(train)
+        train_data_scaled = stock_data_scaled[0: n_train]
+        train_dates = dates[0: n_train]
+
+        n_validation = len(train) + len(vaildation)
+        val_data_scaled = stock_data_scaled[n_train:n_validation]
+        val_dates = dates[n_train:n_validation]
+
+        n_test = n_validation
+        test_data_scaled = stock_data_scaled[n_test:]
+        test_dates = dates[n_test:]
+
+        # data reformatting for LSTM
+        pred_days = 30  # prediction period
+        seq_len = 50   # sequence length = past days for future prediction.
+        input_dim = 74  # input_dimension = ['Open', 'High', 'Low', 'Close', 'Volume']
+
+        trainX = []
+        trainY = []
+        valX = []
+        valY = []
+        testX = []
+        testY = []
+
+        # 추론 날짜 (base_date 출력을 위한)
+        val_dates_for_infer = []
+        test_dates_for_infer = []
+        # val_dates, test_dates는 pd.Series로 되어 있고 numpy datetime으로 되어 있다.
+        val_dates = val_dates.astype('string')
+        test_dates = test_dates.astype('string')
+
+        for i in range(seq_len, n_train-pred_days +1):
+            trainX.append(train_data_scaled[i - seq_len:i, 0:train_data_scaled.shape[1]])
+            trainY.append(train_data_scaled[i + pred_days - 1:i + pred_days, 0])
+        
+        for i in range(seq_len, len(val_data_scaled)-pred_days +1):
+            valX.append(val_data_scaled[i - seq_len:i, 0:val_data_scaled.shape[1]])
+            valY.append(val_data_scaled[i + pred_days - 1:i + pred_days, 0])
+            # base_dates추가
+            val_dates_for_infer.append(val_dates.iloc[i])
+        
+        for i in range(seq_len, len(test_data_scaled)-pred_days +1):
+            testX.append(test_data_scaled[i - seq_len:i, 0:test_data_scaled.shape[1]])
+            testY.append(test_data_scaled[i + pred_days - 1:i + pred_days, 0])
+            # base_dates추가
+            test_dates_for_infer.append(test_dates.iloc[i])
+
+        trainX, trainY = np.array(trainX), np.array(trainY)
+        # print("trainX.shape : ", trainX.shape)
+        # print("trainY.shape : ", trainY.shape)
+        valX, valY = np.array(valX), np.array(valY)
+        testX, testY = np.array(testX), np.array(testY)
 
     from tensorflow.keras.initializers import Constant
     from tensorflow.keras.regularizers import l2
@@ -139,7 +181,9 @@ def gold_lstm(cfg):
 
     # LSTM model
     model = Sequential()
-    model.add(LSTM(64, input_shape=(trainX.shape[1], trainX.shape[2]), # (seq length, input dimension)
+    # model.add(LSTM(64, input_shape=(trainX.shape[1], trainX.shape[2]), # (seq length, input dimension)
+    #             return_sequences=True))
+    model.add(LSTM(64, input_shape=(50, 74), # (seq length, input dimension)
                 return_sequences=True))
     model.add(BatchNormalization())  # Add BatchNormalization here
 
@@ -148,7 +192,8 @@ def gold_lstm(cfg):
     model.add(LSTM(16, return_sequences=False))
 
     model.add(BatchNormalization())
-    model.add(Dense(trainY.shape[1]))
+    # model.add(Dense(trainY.shape[1]))
+    model.add(Dense(1))
 
     # model.summary()
 
@@ -178,7 +223,7 @@ def gold_lstm(cfg):
         # plt.legend()
         # plt.show()
 
-    else:
+    elif cfg.base.mode=='valid':
         model.load_weights(opj(cfg.base.output_dir, 'lstm_weights.h5'))
 
         val_pred = model.predict(valX)
@@ -197,7 +242,12 @@ def gold_lstm(cfg):
         pd.DataFrame(data={"date":val_dates_for_infer, cfg.base.task_name:val_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_21.csv"), index=False)
 
         pd.DataFrame(data={"date":test_dates_for_infer, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_22.csv"), index=False)
-       
+    else:
+        model.load_weights(opj(cfg.base.output_dir, 'lstm_weights.h5'))
+
+        test_pred = model.predict(testX)
+        pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+    
     # # prediction
 
     # prediction = model.predict(testX)

@@ -8,8 +8,8 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 # from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.providers.mysql.operators.mysql import MySqlOperator
-from airflow.exceptions import AirflowException
 from airflow.providers.amazon.aws.transfers.sql_to_s3 import SqlToS3Operator
+from airflow.exceptions import AirflowException
 
 # Define the DAG
 dag = DAG(
