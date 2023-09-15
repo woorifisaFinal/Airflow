@@ -22,11 +22,12 @@ def create_jw_lstm(cfg):
 
     if cfg.base.mode=='infer':
 
-        if (raw_train['date']==cfg.base.base_date).sum()==0:
-            # 존재하지 않는 날. 휴장
-            pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:np.NaN},index=[0]).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
-            return 
+        # if (raw_train['date']==cfg.base.base_date).sum()==0:
+        #     # 존재하지 않는 날. 휴장
+        #     pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:np.NaN},index=[0]).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+        #     return 
         raw_train = raw_train[raw_train['date']<cfg.base.base_date].tail(50)
+        print("kor, raw_train.tail(5)['date'] :",  raw_train.tail(5)['date'])
         raw_train.set_index("date",inplace=True)
 
         # train 데이터 전처리
@@ -188,7 +189,8 @@ def create_jw_lstm(cfg):
         from tensorflow.keras.models import load_model
         model = load_model(opj(cfg.base.output_dir,'jw_lstm_model.h5'))
         test_pred = model.predict(testX)
-        pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+        # pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+        pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction.csv"), index=False)
 
 def create_jw_xgboost(cfg):
     raw_train = pd.read_csv(opj(cfg.base.data_dir, "adj_raw_train.csv"))

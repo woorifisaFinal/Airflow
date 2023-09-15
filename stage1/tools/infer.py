@@ -44,7 +44,9 @@ cfg = SimpleNamespace(**cfg)
 
 from datetime import datetime
 
-cfg.base.base_date = datetime.strptime(parser_args.date, '%Y%m%d').strftime('%Y-%m-%d')
+cfg.base.mode='valid'
+if cfg.base.mode=='infer':
+    cfg.base.base_date = datetime.strptime(parser_args.date, '%Y%m%d').strftime('%Y-%m-%d')
 
 
 def infer(cfg):
@@ -146,8 +148,8 @@ def infer(cfg):
 
         elif cfg.base.mode=='infer':
             preds = model.predict(x_data, verbose="auto")
-            pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:preds.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
-    
+            # pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:preds.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+            pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:preds.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction.csv"), index=False)
 
     elif cfg.base.user_name == "bg":
         models.gold_lstm(cfg)

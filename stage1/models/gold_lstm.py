@@ -19,11 +19,12 @@ def gold_lstm(cfg):
 
     if cfg.base.mode=='infer':
 
-        if (data_nomalized['날짜']==cfg.base.base_date).sum()==0:
-            # 존재하지 않는 날. 휴장
-            pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:np.NaN},index=[0]).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
-            return 
+        # if (data_nomalized['날짜']==cfg.base.base_date).sum()==0:
+        #     # 존재하지 않는 날. 휴장
+        #     pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:np.NaN},index=[0]).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+        #     return 
         test = data_nomalized[data_nomalized['날짜']<cfg.base.base_date].tail(50)
+        print("gold, test.tail(5)['날짜'] :",  test.tail(5)['날짜'])
         test = test.reset_index(drop=True)
 
         first_data = test
@@ -246,8 +247,8 @@ def gold_lstm(cfg):
         model.load_weights(opj(cfg.base.output_dir, 'lstm_weights.h5'))
 
         test_pred = model.predict(testX)
-        pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
-    
+        # pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+        pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction.csv"), index=False)
     # # prediction
 
     # prediction = model.predict(testX)

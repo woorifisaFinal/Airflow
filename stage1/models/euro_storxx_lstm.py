@@ -59,11 +59,12 @@ def euro_lstm(cfg):
     if cfg.base.mode=='infer':
         test = pd.read_csv(opj(cfg.base.data_dir, "allin.csv"))
 
-        if (test['date']==cfg.base.base_date).sum()==0:
-            # 존재하지 않는 날. 휴장
-            pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:np.NaN},index=[0]).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
-            return 
+        # if (test['date']==cfg.base.base_date).sum()==0:
+        #     # 존재하지 않는 날. 휴장
+        #     pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:np.NaN},index=[0]).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+        #     return 
         raw_train = test[test['date']<cfg.base.base_date].tail(50)
+        print("euro, raw_train.tail(5)['date'] :",  raw_train.tail(5)['date'])
         raw_train = add_feature(raw_train)
         dates = pd.to_datetime(raw_train['date'])
 
@@ -129,7 +130,8 @@ def euro_lstm(cfg):
         testX.append(stock_data_scaled)
         testX = np.array(testX)
 
-    elif cfg.base.mode =='train':
+    # elif cfg.base.mode =='train':
+    else:
         scaler = StandardScaler()
         scaler = scaler.fit(raw_train)
 
@@ -262,7 +264,7 @@ def euro_lstm(cfg):
 
 
     elif cfg.base.mode=='valid':
-
+        
         model.load_weights(opj(cfg.base.output_dir, 'lstm_weights_6.h5'))
         val_pred = model.predict(valX)
         test_pred = model.predict(testX)
@@ -275,4 +277,5 @@ def euro_lstm(cfg):
         model.load_weights(opj(cfg.base.output_dir, 'lstm_weights_6.h5'))
 
         test_pred = model.predict(testX)
-        pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+        # pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+        pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction.csv"), index=False)

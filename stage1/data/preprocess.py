@@ -189,6 +189,7 @@ class DataPreprocess:
                 end_date = datetime.strptime(self.cfg.base.base_date, '%Y-%m-%d')
                 start_date = end_date- timedelta(days=100)
                 test = pdr.get_data_yahoo(self.cfg.base.index_name, start_date, end_date).reset_index()
+                print(f"{self.cfg.base.index_name}, test.tail(5)['Date'] :",  test.tail(5)['Date'])
                 # test.tail(50)
                 df_ = jh_make_features(test.tail(50))
                 df = df_[self.cfg.data.feature_list].copy()

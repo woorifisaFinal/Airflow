@@ -212,16 +212,20 @@ def nikkei_lstm(cfg):
         total_df = pd.concat([train, val, test])
         dates = pd.to_datetime(total_df['date'])
         
-        if (total_df['date']==cfg.base.base_date).sum()==0:
-            # 존재하지 않는 날. 휴장
-            pd.DataFrame(data={"date":cfg.base.base_date, "jp":np.NaN},index=[0]).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
-            return 
-        else:
-            total_df = total_df.fillna(method='bfill')
-            total_df = total_df.fillna(method='ffill')
-            test = total_df[total_df['date']<cfg.base.base_date].tail(50)
-    
-    elif cfg.base.mode=='train':
+        # if (total_df['date']==cfg.base.base_date).sum()==0:
+        #     # 존재하지 않는 날. 휴장
+        #     pd.DataFrame(data={"date":cfg.base.base_date, "jp":np.NaN},index=[0]).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+        #     return 
+        # else:
+        #     total_df = total_df.fillna(method='bfill')
+        #     total_df = total_df.fillna(method='ffill')
+        #     test = total_df[total_df['date']<cfg.base.base_date].tail(50)
+        total_df = total_df.fillna(method='bfill')
+        total_df = total_df.fillna(method='ffill')
+        test = total_df[total_df['date']<cfg.base.base_date].tail(50)
+        print("nikkei(JP), test.tail(5)['date'] :",  test.tail(5)['date'])
+    # elif cfg.base.mode=='train':
+    else:
         ##FOR LOCAL
         # train = pd.read_csv(opj(cfg.base.data_dir, 'nikkei_train.csv'))
         # val = pd.read_csv(opj(cfg.base.data_dir, 'nikkei_val.csv'))
@@ -568,4 +572,5 @@ def nikkei_lstm(cfg):
         from keras.models import load_model
         model = load_model(opj(cfg.base.output_dir,"nikkei_lstm.h5"))
         test_pred = model.predict(testX)
-        pd.DataFrame(data={"date":cfg.base.base_date, "jp":test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+        # pd.DataFrame(data={"date":cfg.base.base_date, "jp":test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+        pd.DataFrame(data={"date":cfg.base.base_date, "jp":test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction.csv"), index=False)

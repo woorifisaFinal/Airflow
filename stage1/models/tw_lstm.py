@@ -188,12 +188,12 @@ def bond(cfg, file_name, country):
         data = data.sort_values(by='날짜')
 
         
-        if (data['날짜']==cfg.base.base_date).sum()==0:
-            # 존재하지 않는 날. 휴장
-            pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:np.NaN},index=[0]).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
-            return 
+        # if (data['날짜']==cfg.base.base_date).sum()==0:
+        #     # 존재하지 않는 날. 휴장
+        #     pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:np.NaN},index=[0]).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+        #     return 
         data = data[data['날짜']<cfg.base.base_date].tail(50)
-            
+        print(f"{cfg.base.task_name}, data.tail(5)['날짜'] :",  data.tail(5)['날짜'])
         data = data[['날짜', '종가', '시가', '저가', '변동률', '수익률']]
         if country =='kor':
             data['종가'] = data['종가'].str.replace(',', '').astype(float)
@@ -230,7 +230,8 @@ def bond(cfg, file_name, country):
 
         # 결과 저장
         # import pickle
-        pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+        # pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction_{cfg.base.base_date}.csv"), index=False)
+        pd.DataFrame(data={"date":cfg.base.base_date, cfg.base.task_name:test_pred.reshape(-1,)}).to_csv(opj(cfg.base.output_dir, f"{cfg.base.task_name}_prediction.csv"), index=False)
 
 def bond_short(cfg):
     bond(cfg, '3년국채 데이터17_22.csv', "kor")

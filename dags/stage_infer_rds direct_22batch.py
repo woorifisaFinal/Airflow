@@ -18,19 +18,12 @@ default_args = {
     'start_date': datetime(2023, 9, 12),
     "schedule_interval":"*/2  * * * *", # 매일 06:00에 실행합니다.
     'tags': ['temp'],
-    'retires': 1, # 실험 중이기에 재시도하지 않음
-    'retry_delay': timedelta(minutes=5),
 }
-# retries : 5,
-# 'on_failure_callback':alert.slack_fail_alert,
-# 'on_success_callback':alert.slack_success_alert
-# 성공/실패시 콜백 함수
 
 # 참조: https://velog.io/@moon_happy/Airflow-CSV%ED%8C%8C%EC%9D%BC%EC%9D%84-MySQL%EC%97%90-%EC%A0%81%EC%9E%AC
 def read_csv_and_store_in_mysql():
     # CSV 파일을 읽어 DataFrame으로 변환합니다.
-    # df = pd.read_csv(f"/opt/airflow/stage1/output/stage1_prediction_{today}.csv")
-    df = pd.read_csv(f"/opt/airflow/stage1/output/stage1_prediction.csv")
+    df = pd.read_csv(f"/opt/airflow/stage1/output/stage1_prediction_22.csv")
     connection=BaseHook.get_connection('AWS_RDB') #airflow에서 connection한 mysql id
     database_username=connection.login
     database_password=connection.password
@@ -46,11 +39,11 @@ def read_csv_and_store_in_mysql():
     df.to_sql(con=engine, name='stage1', if_exists='append', index=False)
 
 
-with DAG(dag_id='stage1_predict_rds_direct', default_args=default_args, catchup=False) as dag:
+with DAG(dag_id='stage1_predict_batch_22_rds_direct_batch', default_args=default_args, catchup=False) as dag:
 
     t1 = BashOperator(
         task_id="all_assest",
-        bash_command="${AIRFLOW_HOME}/dags/stage1_predict.sh ",
+        bash_command="${AIRFLOW_HOME}/dags/stage1_predict_22_batch.sh ",
         retries=3, # 이 태스크가 실패한 경우, 3번 재시도 합니다.
         retry_delay=timedelta(minutes=1), # 재시도하는 시간 간격은 1분입니다.
         
