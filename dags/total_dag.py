@@ -34,7 +34,7 @@ today = today.strftime('%Y-%m-%d')
 default_args = {
     'owner': 'joohyuk',  # 이 작업의 오너입니다. 보통 작업을 담당하는 사람 이름을 넣습니다.
     'start_date': datetime(2023, 9, 12),
-    "schedule_interval":"*/2  * * * *", # 매일 6시 AM에 실행하도록 설정
+    "schedule_interval":'0 0 * * *', # daliy #"*/2  * * * *", # 매일 6시 AM에 실행하도록 설정
     'tags': ['customDAG'],
     'retires': 1, # 실험 중이기에 재시도하지 않음
     'retry_delay': timedelta(minutes=5),
