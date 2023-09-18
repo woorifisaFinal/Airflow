@@ -4,6 +4,7 @@ export today="$(date '+%Y%m%d')"
 cd ${stage_dir}
 echo ${stage_dir}
 echo ${today}
+echo ${AIRFLOW_HOME}
 python -m stage1.tools.infer -C ${config_dir}/tw/kor3y_lstm_infer.yml -D ${today}
 python -m stage1.tools.infer -C ${config_dir}/tw/kor10y_lstm_infer.yml -D ${today}
 python -m stage1.tools.infer -C ${config_dir}/tw/us10y_lstm_infer.yml -D ${today}

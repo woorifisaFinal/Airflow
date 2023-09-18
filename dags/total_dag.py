@@ -10,14 +10,20 @@ from airflow.hooks.base_hook import BaseHook
 from sqlalchemy import create_engine
 import pymysql
 import yfinance as yf
-# import sys
+import sys
+# sys.path.insert(0,"/opt/airflow/model_backend")
 # sys.path.append("/opt/airflow/model_backend")
 
 # from CustomModel import custom_model
-from .model_backend.AlphaModel import alpha_model
-from .model_backend.blackLitterman import runBlack
-import sys, time, json, logging
+# from '${AIRFLOW_HOME}'.model_backend.blackLitterman import runBlack
+# from '${AIRFLOW_HOME}'.model_backend.AlphaModel import alpha_model
+from plugins.blackLitterman import runBlack
+from plugins.AlphaModel import alpha_model
+from plugins.CustomModel import custom_model
 
+# print(f"airflow home : ${AIRFLOW_HOME}")
+import sys, time, json, logging
+import os
 
 local_tz = pendulum.timezone("Asia/Seoul")
 today = pendulum.now().date()
@@ -71,10 +77,15 @@ def getClose():
     col_list = ['us', 'uk', 'jp', 'euro', 'kor', 'ind', 'tw', 'br', 'gold'] 
     before_10_days = (pendulum.now().date()-pd.Timedelta(days=5)).strftime('%Y-%m-%d')
     df = yf.download(symbol, before_10_days, today)
+    print("df")
+    print(df)
     dfs = df['Close']
+    print("dfs : ")
+    print(dfs)
     rename_dict = {old_col: new_col for old_col, new_col in zip(dfs.columns, col_list)}
     # 마지막 하루만 넣어주기, 이전 날이 휴일일 수도 있으니깐. 10일 가져옴
-    dfs = dfs.rename(columns=rename_dict).tail(1)
+    # 이전 날이 휴일이 곳, 아닌 곳 으로 인해 NaN값이 들어간다. 일단 5일값 가져오자
+    dfs = dfs.rename(columns=rename_dict).tail(5)
 
     dfs.to_sql(name='symboltest', con=engine, index=True, if_exists='append',) # schema='woorifisa'
     # connection.commit()
@@ -86,12 +97,13 @@ def read_close_and_store_in_csv():
     """
     table = "symboltest"
     
-    query = f"SELECT * FROM {table} BETWEEN {before_1_year} AND {today}"
+    # '표시를 넣어주어야 되네
+    query = f"SELECT * FROM {table} WHERE date BETWEEN '{before_1_year}' AND '{today}'"
     # 데이터를 MySQL의 새 테이블에 저장합니다. 기존에 있는 테이블이라면, 데이터를 덮어쓰거나 추가할 수 있습니다.
     df = pd.read_sql(sql=query, con=engine)
     # 종가들 내 공휴일을 이유로(?) 결측값 있는 것 모두 interpolate로 채워주기 (처음과 끝에 있는 결측값들은 채워지지 않는다.)
     df = df.interpolate()
-    df.to_csv("/opt/airflow/data/close.csv")
+    df.to_csv("/opt/airflow/data/close.csv", index=False)
 
 def read_stage1_and_store_in_csv():
     """
@@ -103,7 +115,7 @@ def read_stage1_and_store_in_csv():
     # 데이터를 MySQL의 새 테이블에 저장합니다. 기존에 있는 테이블이라면, 데이터를 덮어쓰거나 추가할 수 있습니다.
     df = pd.read_sql(sql=query, con=engine)
     df = df.interpolate()
-    df.to_csv("/opt/airflow/data/stage1_result.csv")
+    df.to_csv("/opt/airflow/data/stage1_result.csv", index=False)
 
 def saveTodayPortfolio():
     ##FOR PROJECT
@@ -120,7 +132,7 @@ def saveTodayPortfolio():
     b1_ = json.loads(b1)
     b2_ = json.loads(b2)
 
-    # c1, c2 = custom_model(today)
+    c1, c2 = custom_model(today)
 
 
     a1 = pd.DataFrame(a1).T
@@ -143,17 +155,17 @@ def saveTodayPortfolio():
     b2['type'] = 'B/안정형'
     b2['type'] = b2['type'].astype(str)
 
-    # c1 = c1.astype('float')
-    # c1['type'] = "C/안정형"
-    # c1['type'] = c1['type'].astype(str)
+    c1 = c1.astype('float')
+    c1['type'] = "C/안정형"
+    c1['type'] = c1['type'].astype(str)
 
-    # c2 = c2.astype('float')
-    # c2['type'] = 'C/공격형'
-    # c2['type'] = c2['type'].astype(str)
+    c2 = c2.astype('float')
+    c2['type'] = 'C/공격형'
+    c2['type'] = c2['type'].astype(str)
 
 
-    # df = pd.concat([b1, b2, a1, a2, c1, c2])
-    df = pd.concat([b1, b2, a1, a2])
+    df = pd.concat([b1, b2, a1, a2, c1, c2])
+    # df = pd.concat([b1, b2, a1, a2])
     df['date'] = today
     df.to_sql(name='portfolio', con=engine, index=False, if_exists='append',  schema='woorifisa')
     return 0
@@ -161,14 +173,14 @@ def saveTodayPortfolio():
 with DAG(dag_id='total_dag', default_args=default_args, catchup=False) as dag:
 
     run_stage1 = BashOperator(
-        task_id="run_stage1_for_all_assest",
+        task_id="run_prediction_for_all_assest",
         bash_command="${AIRFLOW_HOME}/dags/stage1_predict.sh ",
         retries=3, # 이 태스크가 실패한 경우, 3번 재시도 합니다.
         retry_delay=timedelta(minutes=1), # 재시도하는 시간 간격은 1분입니다. 
     )
 
     save_stage1_per_one_day = PythonOperator(
-	task_id='save_stage1_per_one_day', # read_csv_and_store_in_mysql
+	task_id='save_prediction_per_one_day', # read_csv_and_store_in_mysql
 	python_callable=read_csv_and_store_in_mysql,
 	dag=dag,
     )
@@ -187,7 +199,7 @@ with DAG(dag_id='total_dag', default_args=default_args, catchup=False) as dag:
     )
 
     get_stage1_for_portfolio = PythonOperator(
-	task_id='get_stage1_for_portfolio',
+	task_id='get_prediction_for_portfolio',
 	python_callable=read_stage1_and_store_in_csv,
 	dag=dag,
     )
@@ -203,8 +215,27 @@ with DAG(dag_id='total_dag', default_args=default_args, catchup=False) as dag:
     #     bash_command ='python /opt/airflow/model_backend/everyday.py'
     # )
 
-    # stage1 돌리기 >> stage1 추론 결과 RDS 저장, 종가 데이터 RDS 저장 >> 
-    run_stage1 >> [save_stage1_per_one_day, save_close_per_one_day] >> \
-        [get_close_for_portfolio, get_stage1_for_portfolio]\
-    >> run_portfolio_model
+
+    # # stage1 추론
+    # run_stage1>> save_stage1_per_one_day
+    # # stage2 (포트폴리오 모델에 사용될 종가 야후 finance로 받아오기)
+    # save_stage1_per_one_day >> save_close_per_one_day >> [get_close_for_portfolio, get_stage1_for_portfolio]
+    # # 잘 save가 진행되었을 경우
+    # # RDS에 저장된 stage1 추론값과 종가들을 EC2 내에 파일(csv)로 저장해준다.
+    # # [save_stage1_per_one_day, save_close_per_one_day] >> [get_close_for_portfolio, get_stage1_for_portfolio]
+    # # 잘 get했을 경우, 3개의 포트폴리오 모델을 추론하고 RDS에 저장해준다.
+    # [get_close_for_portfolio, get_stage1_for_portfolio] >> run_portfolio_model
+
+    
+    # stage1 추론
+    run_stage1>> save_stage1_per_one_day >> get_stage1_for_portfolio
+    # stage2 (포트폴리오 모델에 사용될 종가 야후 finance로 받아오기)
+    save_close_per_one_day >> get_close_for_portfolio
+    # 잘 save가 진행되었을 경우
+    # RDS에 저장된 stage1 추론값과 종가들을 EC2 내에 파일(csv)로 저장해준다.
+    # [save_stage1_per_one_day, save_close_per_one_day] >> get_close_for_portfolio >> get_stage1_for_portfolio
+    # 잘 get했을 경우, 3개의 포트폴리오 모델을 추론하고 RDS에 저장해준다.
+    [get_close_for_portfolio, get_stage1_for_portfolio] >> run_portfolio_model
+
+
     

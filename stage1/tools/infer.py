@@ -44,7 +44,7 @@ cfg = SimpleNamespace(**cfg)
 
 from datetime import datetime
 
-cfg.base.mode='valid'
+# cfg.base.mode='valid'
 if cfg.base.mode=='infer':
     cfg.base.base_date = datetime.strptime(parser_args.date, '%Y%m%d').strftime('%Y-%m-%d')
 

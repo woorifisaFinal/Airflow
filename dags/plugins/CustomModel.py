@@ -232,7 +232,9 @@ def custom_model(date): #원하는 날짜의 성향별 가중치 출력 #return 
         risky_sum = 0
 
         # date의 행을 선택
-        row = post_prediction[post_prediction['date']==date]
+        # row = post_prediction[post_prediction['date']==date]
+        ############## 수정 ################3
+        row = post_prediction
         stable_sum = row[stable_asset].sum(axis=1).values[0]
         risky_sum =  row[risky_asset].sum(axis=1).values[0]
 
@@ -374,7 +376,7 @@ def custom_model(date): #원하는 날짜의 성향별 가중치 출력 #return 
     np.random.seed(123)
 
     #### 학습 후 저장
-    train_and_sve()
+    # train_and_save()
     
     #############rds에서 df 받아오면서 이전 코드 주석처리
     # df = pd.read_csv("total_17_22.csv",index_col=0)
@@ -389,10 +391,17 @@ def custom_model(date): #원하는 날짜의 성향별 가중치 출력 #return 
     #################
 
     #### 모델 불러오기
-    loaded_model = tf.keras.models.load_model("/content/drive/MyDrive/ITStudy/파이널프젝/model/model.h5", custom_objects={'sharpe_loss': sharpe_loss})
-    
+    loaded_model = tf.keras.models.load_model("/opt/airflow/stage1/output/model.h5", custom_objects={'sharpe_loss': sharpe_loss})
+    def changed_get_from_rds():
+        
+        col_list = ['us', 'uk', 'jp', 'euro', 'kor', 'ind', 'tw', 'br', 'kor3y', 'kor10y', 'us3y', 'us10y', 'gold'] # list(asset_market.keys())
+
+        original_closes_data = pd.read_csv("/opt/airflow/data/close.csv", index_col=0)[col_list]
+
+        return original_closes_data.tail(51)
     #### rds에서 test 데이터 불러오기
-    now = get_from_rds()
+    now = changed_get_from_rds()
+    # now = get_from_rds()
 
     #### test데이터 (1,50,26) (total sample number, lookback window, columns 갯수*2), make_test_data()는 make_data()함수를 수정해서 정의
 

@@ -160,3 +160,11 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 logs/scheduler/latest
+
+dags/__pycache__/
+dags/stage_infer_*
+dags/stage1_infer_*
+dags/stage1_predict_for_iter.sh
+dags/tmp.py
+model_backend/
+dags/plugins/onemore.py
